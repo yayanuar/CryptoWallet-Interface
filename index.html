@@ -1,14 +1,66 @@
+<!-- index = skeleton
+style = skin/appearance 
+script = brain -->
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My Frontend Project</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>CryptoWallet Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Hello Frontend 👋</h1>
-    <button onclick="showMessage()">Click Me</button>
+  <div class="screen">
+     <!-- Dark/Light Mode Toggle Button -->
+       <button id="themeToggle">🌙</button>
+    <div class="content">
+      
 
-    <script src="script.js"></script>
+      <h1>Welcome to,<br><span>CryptoWallet Tracker</span></h1>
+
+      <!-- Input section -->
+      <div class="input-section">
+        <label>Enter Wallet Address</label>
+        <input type="text" placeholder="Example: 0x29f4w1...">
+        <button id="analyzeBtn">Analyze Wallet</button>
+      </div>
+
+      <!-- Result section (hidden initially) -->
+      <div class="result hidden" id="result"></div>
+
+      <!-- Cyber news -->
+      <h2>Trending CyberNews :</h2>
+      <div class="news">
+
+        <a href="https://www.kaspersky.com/resource-center/definitions/what-is-cryptocurrency" target="_blank">
+          <div class="card">
+            <img src="images\cryptocurrencyimage11130490519670x377px300dpi.jpg" alt="Cryptocurrency">
+            <h3>What is Cryptocurrency</h3>
+            <p>Learn about cryptocurrency and its risks.</p>
+            <span>21 days ago</span>
+          </div>
+        </a>
+
+        <a href="https://www.example.com/cyber-crime-alert" target="_blank">
+          <div class="card">
+            <img src="images\cryptocurrencyimage11130490519670x377px300dpi.jpg" alt="Cryptocurrency">
+            <h3>New Cyber Crime Alert</h3>
+            <p>Million Boost to Malaysia</p>
+            <span>Oct 11, 2025</span>
+          </div>
+        </a>
+
+      </div>
+
+      <footer>
+        Copyrights © PutraAI 2025
+      </footer>
+
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
