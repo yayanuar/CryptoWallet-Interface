@@ -36,37 +36,44 @@ document.getElementById("analyzeBtn").addEventListener("click", async () => {
   resultDiv.innerHTML = `<p>Loading...</p>`;
 
   try {
-    // Fetch ETH balance
-    const balanceResp = await fetch(`https://api.etherscan.io/api?module=account&action=balance&address=${walletAddress}&tag=latest&apikey=${API_KEY}`);
-    const balanceData = await balanceResp.json();
-    const balanceETH = (balanceData.result / 1e18).toFixed(4);
+    // 🔹 Call local Flask backend instead of Etherscan directly
+    const response = await fetch("http://localhost:5000/analyze-wallet", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ wallet_address: walletAddress })
+    });
 
-    // Fetch last 5 transactions
-    const txResp = await fetch(`https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=5&sort=desc&apikey=${API_KEY}`);
-    const txData = await txResp.json();
+    const data = await response.json();
 
-    let txHTML = "<ul>";
-    if (!txData.result || txData.result.length === 0) {
-      txHTML += "<li>No recent transactions</li>";
-    } else {
-      txData.result.forEach(tx => {
-        const valueETH = (tx.value / 1e18).toFixed(4);
-        txHTML += `<li>Hash: ${tx.hash.substring(0,10)}... | Value: ${valueETH} ETH</li>`;
-      });
-    }
-    txHTML += "</ul>";
+    // Display result
+    let reasonsHTML = "<ul>";
+    data.reasons.forEach(r => {
+      reasonsHTML += `<li>${r}</li>`;
+    });
+    reasonsHTML += "</ul>";
 
     resultDiv.innerHTML = `
       <h3>Wallet Analysis Result:</h3>
-      <p><strong>Address:</strong> ${walletAddress}</p>
-      <p><strong>Balance:</strong> ${balanceETH} ETH</p>
-      <p><strong>Recent Transactions:</strong></p>
-      ${txHTML}
+      <p><strong>Address:</strong> ${data.wallet}</p>
+      <p><strong>Risk Level:</strong> ${data.risk_level}</p>
+      <p><strong>Risk Score:</strong> ${data.risk_score}/100</p>
+      <p><strong>Why flagged:</strong></p>
+      ${reasonsHTML}
+      <p><strong>Stats:</strong></p>
+      <ul>
+        <li>Total Transactions: ${data.stats.total_transactions}</li>
+        <li>Unique Receivers: ${data.stats.unique_receivers}</li>
+        <li>Total Sent (Wei): ${data.stats.total_sent_wei}</li>
+      </ul>
     `;
   } catch (error) {
-    resultDiv.innerHTML = `<p style="color: #ff4f4f;">Error fetching wallet data. Try again.</p>`;
+    resultDiv.innerHTML = `<p style="color: #ff4f4f;">Error fetching wallet data from backend. Try again.</p>`;
     console.error(error);
   }
+});
+
 
   function updateArticleDates() {
   const dateElements = document.querySelectorAll(".date");
