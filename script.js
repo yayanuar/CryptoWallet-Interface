@@ -1,31 +1,73 @@
-const API_KEY = "555"; 
 const themeToggleBtn = document.getElementById("themeToggle");
+const analyzeBtn = document.getElementById("analyzeBtn");
+const resultDiv = document.getElementById("result");
+const walletInput = document.querySelector(".input-section input");
+
+let txChart = null;
+
+/* ================= THEME TOGGLE ================= */
 
 // Load saved theme
-if(localStorage.getItem("theme") === "dark") {
+if (localStorage.getItem("theme") === "dark") {
   document.body.classList.add("dark-mode");
-  themeToggleBtn.textContent = "☀️"; // sun for dark mode
+  themeToggleBtn.textContent = "☀️";
 } else {
-  themeToggleBtn.textContent = "🌙"; // moon for light mode
+  themeToggleBtn.textContent = "🌙";
 }
 
-// Toggle dark/light mode on click
+// Toggle theme
 themeToggleBtn.addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
 
   if (document.body.classList.contains("dark-mode")) {
-    themeToggleBtn.textContent = "☀️"; // sun icon
+    themeToggleBtn.textContent = "☀️";
     localStorage.setItem("theme", "dark");
   } else {
-    themeToggleBtn.textContent = "🌙"; // moon icon
+    themeToggleBtn.textContent = "🌙";
     localStorage.setItem("theme", "light");
   }
 });
 
-// Wallet analysis
-document.getElementById("analyzeBtn").addEventListener("click", async () => {
-  const walletAddress = document.querySelector(".input-section input").value.trim();
-  const resultDiv = document.getElementById("result");
+/* ================= TRANSACTION CHART ================= */
+
+function drawTransactionChart(transactions, walletAddress) {
+  const ctx = document.getElementById("txChart").getContext("2d");
+
+  if (txChart) {
+    txChart.destroy();
+  }
+
+  const sentTxs = transactions.filter(
+    tx => tx.from.toLowerCase() === walletAddress.toLowerCase()
+  );
+
+  const values = sentTxs.map(tx => parseInt(tx.value) / 1e18);
+  const labels = values.map((_, i) => `Tx ${i + 1}`);
+
+  txChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "ETH Sent",
+        data: values
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true
+        }
+      }
+    }
+  });
+}
+
+/* ================= WALLET ANALYSIS ================= */
+
+analyzeBtn.addEventListener("click", async () => {
+  const walletAddress = walletInput.value.trim();
 
   if (!walletAddress) {
     alert("Please enter a wallet address!");
@@ -33,10 +75,9 @@ document.getElementById("analyzeBtn").addEventListener("click", async () => {
   }
 
   resultDiv.classList.remove("hidden");
-  resultDiv.innerHTML = `<p>Loading...</p>`;
+  resultDiv.innerHTML = "<p>Analyzing wallet in real-time...</p>";
 
   try {
-    // 🔹 Call local Flask backend instead of Etherscan directly
     const response = await fetch("http://localhost:5000/analyze-wallet", {
       method: "POST",
       headers: {
@@ -47,54 +88,60 @@ document.getElementById("analyzeBtn").addEventListener("click", async () => {
 
     const data = await response.json();
 
-    // Display result
+    /* -------- Reasons -------- */
     let reasonsHTML = "<ul>";
-    data.reasons.forEach(r => {
-      reasonsHTML += `<li>${r}</li>`;
+    data.reasons.forEach(reason => {
+      reasonsHTML += `<li>${reason}</li>`;
     });
     reasonsHTML += "</ul>";
 
+    /* -------- Risk Breakdown -------- */
+    let breakdownHTML = "<ul>";
+    for (const key in data.risk_breakdown) {
+      breakdownHTML += `<li>${key.replace(/_/g, " ")}: ${data.risk_breakdown[key]} pts</li>`;
+    }
+    breakdownHTML += "</ul>";
+
+    /* -------- Display Result -------- */
     resultDiv.innerHTML = `
-      <h3>Wallet Analysis Result:</h3>
-      <p><strong>Address:</strong> ${data.wallet}</p>
+      <h3>Wallet Analysis Result</h3>
+
+      <p><strong>Wallet Address:</strong> ${data.wallet}</p>
       <p><strong>Risk Level:</strong> ${data.risk_level}</p>
       <p><strong>Risk Score:</strong> ${data.risk_score}/100</p>
-      <p><strong>Why flagged:</strong></p>
+
+      <p><strong>Why Flagged:</strong></p>
       ${reasonsHTML}
-      <p><strong>Stats:</strong></p>
+
+      <p><strong>Risk Score Breakdown:</strong></p>
+      ${breakdownHTML}
+
+      <p><strong>Statistics:</strong></p>
       <ul>
         <li>Total Transactions: ${data.stats.total_transactions}</li>
         <li>Unique Receivers: ${data.stats.unique_receivers}</li>
         <li>Total Sent (Wei): ${data.stats.total_sent_wei}</li>
       </ul>
+
+      <p><strong>Real-Time Information:</strong></p>
+      <ul>
+        <li>ETH Balance (Wei): ${data.real_time.eth_balance_wei}</li>
+        <li>Last Activity: ${data.real_time.last_activity}</li>
+        <li>Analysis Time: ${data.real_time.analysis_time}</li>
+      </ul>
     `;
-  } catch (error) {
-    resultDiv.innerHTML = `<p style="color: #ff4f4f;">Error fetching wallet data from backend. Try again.</p>`;
-    console.error(error);
-  }
-});
 
-
-  function updateArticleDates() {
-  const dateElements = document.querySelectorAll(".date");
-
-  dateElements.forEach(el => {
-    const articleDate = new Date(el.dataset.date);
-    const today = new Date();
-
-    const diffTime = today - articleDate;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      el.textContent = "Today";
-    } else if (diffDays === 1) {
-      el.textContent = "1 day ago";
-    } else {
-      el.textContent = `${diffDays} days ago`;
+    /* -------- Draw Chart -------- */
+    if (data.transactions && data.transactions.length > 0) {
+      drawTransactionChart(data.transactions, walletAddress);
     }
-  });
-}
 
-updateArticleDates();
-
+  } catch (error) {
+    console.error(error);
+    resultDiv.innerHTML = `
+      <p style="color:red;">
+        Error connecting to backend. Make sure Flask server is running.
+      </p>
+    `;
+  }
 });
